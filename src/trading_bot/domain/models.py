@@ -112,3 +112,17 @@ class RiskResult:
     approved_notional: float
     reason: str
     checks: list = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class Fill:
+    order_id: str
+    symbol: str
+    side: OrderSide
+    qty: float
+    price: float
+    timestamp: datetime
+
+    @property
+    def notional(self) -> float:
+        return self.qty * self.price
