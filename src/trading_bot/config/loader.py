@@ -14,10 +14,23 @@ def load_config(path: str = "config.yaml") -> dict:
     return cfg
 
 
+def _int(value, default):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def load_secrets(path: str = ".env") -> dict:
     values = dotenv_values(path) if os.path.exists(path) else {}
     return {
         "ALPACA_API_KEY": values.get("ALPACA_API_KEY", ""),
         "ALPACA_SECRET_KEY": values.get("ALPACA_SECRET_KEY", ""),
         "ALPACA_PAPER": str(values.get("ALPACA_PAPER", "true")).lower() == "true",
+        "SMTP_HOST": values.get("SMTP_HOST", ""),
+        "SMTP_PORT": _int(values.get("SMTP_PORT", 587), 587),
+        "SMTP_USER": values.get("SMTP_USER", ""),
+        "SMTP_PASS": values.get("SMTP_PASS", ""),
+        "REPORT_FROM_EMAIL": values.get("REPORT_FROM_EMAIL", ""),
+        "REPORT_TO_EMAIL": values.get("REPORT_TO_EMAIL", ""),
     }

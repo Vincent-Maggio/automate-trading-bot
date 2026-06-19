@@ -67,3 +67,25 @@ class AuditLog:
             raise ValueError(f"unknown table {table}")
         cur = self.conn.execute(f"SELECT COUNT(*) FROM {table}")
         return cur.fetchone()[0]
+
+    def recent_decisions(self, limit: int = 20) -> list:
+        cur = self.conn.execute(
+            "SELECT run_id, ts, symbol, action, net_score, consensus_met, rationale "
+            "FROM decisions ORDER BY ts DESC LIMIT ?", (limit,))
+        cols = ["run_id", "ts", "symbol", "action", "net_score",
+                "consensus_met", "rationale"]
+        return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    def recent_fills(self, limit: int = 20) -> list:
+        cur = self.conn.execute(
+            "SELECT run_id, ts, order_id, symbol, side, qty, price "
+            "FROM fills ORDER BY ts DESC LIMIT ?", (limit,))
+        cols = ["run_id", "ts", "order_id", "symbol", "side", "qty", "price"]
+        return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    def recent_events(self, limit: int = 20) -> list:
+        cur = self.conn.execute(
+            "SELECT run_id, ts, kind, detail "
+            "FROM events ORDER BY ts DESC LIMIT ?", (limit,))
+        cols = ["run_id", "ts", "kind", "detail"]
+        return [dict(zip(cols, row)) for row in cur.fetchall()]

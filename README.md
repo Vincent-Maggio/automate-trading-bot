@@ -27,3 +27,16 @@ PYTHONPATH=src pytest -v
 - Phase 1 reads historical data only; it places no orders.
 - Secrets live in `.env` (gitignored). Never commit real keys.
 - All financial parameters live in `config.yaml`; nothing is hardcoded.
+
+## Reporting (Phase 3a)
+
+Generate and deliver the morning or nightly portfolio report:
+
+```bash
+PYTHONPATH=src python scripts/send_report.py morning
+PYTHONPATH=src python scripts/send_report.py nightly
+```
+
+- Delivery channel is set by `reporting.delivery` in `config.yaml` (`console` or `email`).
+- For email, set `SMTP_*` and `REPORT_*` in `.env` (Gmail: use an App Password, not your account password).
+- Report content: equity, cash, exposure, realized P&L, current positions, what the bot did (fills + decisions), and any alerts (circuit breaker / kill switch).
