@@ -31,9 +31,12 @@ class AlpacaHistoricalClient:
                    timeframe: str) -> list:
         from alpaca.data.requests import StockBarsRequest
         from alpaca.data.timeframe import TimeFrame
+        from alpaca.data.enums import DataFeed
         tf = TimeFrame.Day if timeframe == "1Day" else TimeFrame.Day
+        # Free Alpaca accounts are entitled to the IEX feed, not SIP.
         request = StockBarsRequest(
-            symbol_or_symbols=symbol, timeframe=tf, start=start, end=end
+            symbol_or_symbols=symbol, timeframe=tf, start=start, end=end,
+            feed=DataFeed.IEX,
         )
         resp = self._client.get_stock_bars(request)
         raw_rows = resp.data.get(symbol, [])
