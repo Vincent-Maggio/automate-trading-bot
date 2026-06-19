@@ -1,6 +1,6 @@
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone, date
 
 from trading_bot.config.loader import load_config, load_secrets
 from trading_bot.data.store import BarStore
@@ -19,7 +19,11 @@ from trading_bot.engine.cycle import TradingCycle
 from trading_bot.runtime.clock import MarketClock
 from trading_bot.runtime.runtime import Runtime
 from trading_bot.runtime.monitoring import maybe_alert
+from trading_bot.reporting.account_reader import AlpacaAccountReader
+from trading_bot.reporting.snapshot import AccountSnapshot
+from trading_bot.reporting.report_builder import build_report
 from trading_bot.notify.console_notifier import ConsoleNotifier
+from trading_bot.notify.email_notifier import EmailNotifier
 
 
 def build_runtime():
@@ -31,6 +35,7 @@ def build_runtime():
     md = MarketData(store, hist_client, cfg["data"]["timeframe"])
     risk = cfg["risk"]
     dec = cfg["decision"]
+    rep = cfg["reporting"]
     control_store = ControlStore(cfg["control"]["db"])
     audit = AuditLog(cfg["execution"]["audit_db"])
     notifier = ConsoleNotifier()
@@ -44,7 +49,7 @@ def build_runtime():
         }
 
     def run_cycle():
-        end = datetime.utcnow()
+        end = datetime.now(timezone.utc)
         start = end - timedelta(days=120)
         symbols = cfg["universe"]
         history = {sym: md.get_bars(sym, start, end) for sym in symbols}
@@ -63,16 +68,34 @@ def build_runtime():
                              stop_loss_pct=risk["stop_loss_pct"],
                              take_profit_pct=risk["take_profit_pct"],
                              per_trade_pct=risk["per_trade_pct"])
-        run_id = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
         summary = cycle.run_once([s for s in symbols if s in prices], history, prices, run_id)
         maybe_alert(safety, control_store, notifier)
         print(f"[cycle] {run_id} {summary}")
         return summary
 
     def send_report(kind):
-        print(f"[report] would send {kind} report (wire to scripts/send_report.py)")
+        activity = {
+            "date": date.today().isoformat(),
+            "decisions": audit.recent_decisions(rep["recent_limit"]),
+            "fills": audit.recent_fills(rep["recent_limit"]),
+            "events": audit.recent_events(rep["recent_limit"]),
+        }
+        if secrets["ALPACA_API_KEY"]:
+            snapshot = AlpacaAccountReader(secrets["ALPACA_API_KEY"],
+                                           secrets["ALPACA_SECRET_KEY"]).snapshot()
+        else:
+            snapshot = AccountSnapshot(0.0, 0.0, 0.0, 0.0, [])
+        subject, text, html = build_report(kind, snapshot, activity)
+        if rep["delivery"] == "email":
+            EmailNotifier(host=secrets["SMTP_HOST"], port=secrets["SMTP_PORT"],
+                          username=secrets["SMTP_USER"], password=secrets["SMTP_PASS"],
+                          sender=secrets["REPORT_FROM_EMAIL"],
+                          recipient=secrets["REPORT_TO_EMAIL"]).send(subject, text, html)
+        else:
+            ConsoleNotifier().send(subject, text, html)
+        print(f"[report] sent {kind}: {subject}")
 
-    rep = cfg["reporting"]
     runtime = Runtime(MarketClock(), control_store, run_cycle, send_report,
                       morning_hour=rep["morning_hour"], nightly_hour=rep["nightly_hour"])
     return runtime, cfg
@@ -82,7 +105,7 @@ def main():
     runtime, cfg = build_runtime()
     interval = cfg["runtime"]["poll_interval_seconds"]
     print(f"bot started; polling every {interval}s. Ctrl-C to stop.")
-    runtime.run_forever(datetime.utcnow, time.sleep, interval)
+    runtime.run_forever(lambda: datetime.now(timezone.utc), time.sleep, interval)
 
 
 if __name__ == "__main__":

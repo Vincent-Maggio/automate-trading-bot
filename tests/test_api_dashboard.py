@@ -14,5 +14,6 @@ def test_dashboard_served_at_root(tmp_path):
     assert r.status_code == 200
     assert "text/html" in r.headers["content-type"]
     body = r.text.lower()
-    assert '<div id="root"' in body or "<div id='root'" in body
-    assert "trading bot" in body
+    assert "trading bot dashboard" in body
+    assert 'id="equity"' in body          # data card present
+    assert "kill switch" in body          # control present

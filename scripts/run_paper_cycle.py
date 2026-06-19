@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from trading_bot.config.loader import load_config, load_secrets
 from trading_bot.data.store import BarStore
@@ -37,7 +37,7 @@ def main() -> None:
                                     secrets["ALPACA_SECRET_KEY"])
     md = MarketData(store, client, cfg["data"]["timeframe"])
 
-    end = datetime.utcnow()
+    end = datetime.now(timezone.utc)
     start = end - timedelta(days=120)
     symbols = cfg["universe"]
     history = {sym: md.get_bars(sym, start, end) for sym in symbols}
@@ -67,7 +67,7 @@ def main() -> None:
         stop_loss_pct=risk["stop_loss_pct"], take_profit_pct=risk["take_profit_pct"],
         per_trade_pct=risk["per_trade_pct"],
     )
-    run_id = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
     summary = cycle.run_once([s for s in symbols if s in prices], history, prices, run_id)
     print(f"run_id={run_id} summary={summary}")
     print("positions:", {s: (p.qty, p.avg_cost) for s, p in pf.positions.items()})

@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 _TABLES = {
     "signals": "run_id TEXT, ts TEXT, symbol TEXT, action TEXT, confidence REAL, rationale TEXT",
@@ -19,7 +19,7 @@ class AuditLog:
         self.conn.commit()
 
     def _now(self) -> str:
-        return datetime.utcnow().isoformat()
+        return datetime.now(timezone.utc).isoformat()
 
     def log_signal(self, run_id, signal) -> None:
         self.conn.execute(

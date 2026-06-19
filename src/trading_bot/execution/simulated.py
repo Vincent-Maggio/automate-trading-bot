@@ -1,11 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from trading_bot.domain.models import Fill, OrderStatus
 from trading_bot.execution.base import ExecutionClient
 
 
 class SimulatedExecutor(ExecutionClient):
     def __init__(self, now=None):
-        self._now = now or datetime.utcnow
+        self._now = now or (lambda: datetime.now(timezone.utc))
         self._fills_by_key: dict = {}
 
     def submit_order(self, order, ref_price: float) -> Fill:

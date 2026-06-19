@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from trading_bot.domain.models import Fill, OrderSide, OrderStatus
 from trading_bot.execution.base import ExecutionClient
 
@@ -31,4 +31,4 @@ class AlpacaPaperExecutor(ExecutionClient):
             order.status = OrderStatus.PENDING
         return Fill(order_id=str(getattr(resp, "id", order.id)),
                     symbol=order.symbol, side=order.side, qty=filled_qty,
-                    price=price, timestamp=datetime.utcnow())
+                    price=price, timestamp=datetime.now(timezone.utc))
