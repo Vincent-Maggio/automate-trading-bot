@@ -1,0 +1,31 @@
+universe:
+  - SPY
+  - QQQ
+  - VTI
+  - IWM
+  - DIA
+  - AAPL
+  - MSFT
+  - GOOGL
+  - AMZN
+  - JPM
+  - JNJ
+  - PG
+  - KO
+  - V
+
+capital:
+  starting_cash: 500.0
+
+data:
+  timeframe: "1Day"
+  cache_db: "market_data.sqlite"
+
+backtest:
+  start: "2023-01-01"
+  end: "2024-01-01"
+
+strategies:
+  sma_crossover:
+    fast: 20
+    slow: 50
