@@ -46,6 +46,19 @@ risk:
 execution:
   mode: "sim"
   audit_db: "audit.sqlite"
+  live: false
+
+control:
+  db: "control.sqlite"
+
+runtime:
+  poll_interval_seconds: 300
+
+reporting:
+  delivery: "console"
+  morning_hour: 8
+  nightly_hour: 18
+  recent_limit: 20
 
 strategies:
   sma_crossover:
@@ -57,9 +70,3 @@ strategies:
     overbought: 70.0
   momentum:
     lookback: 20
-
-reporting:
-  delivery: "console"
-  morning_hour: 8
-  nightly_hour: 18
-  recent_limit: 20

@@ -4,12 +4,13 @@ from trading_bot.execution.base import ExecutionClient
 
 
 class AlpacaPaperExecutor(ExecutionClient):
-    def __init__(self, api_key: str, secret_key: str, _client=None):
+    def __init__(self, api_key: str, secret_key: str, _client=None, paper: bool = True):
+        self.paper = paper
         if _client is not None:
             self._client = _client
         else:
             from alpaca.trading.client import TradingClient
-            self._client = TradingClient(api_key, secret_key, paper=True)
+            self._client = TradingClient(api_key, secret_key, paper=paper)
 
     def submit_order(self, order, ref_price: float) -> Fill:
         from alpaca.trading.requests import MarketOrderRequest

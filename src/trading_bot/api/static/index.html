@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Trading Bot Dashboard</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  body { font-family: system-ui, Arial, sans-serif; margin: 0; background: #0f1115; color: #e6e6e6; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px; }
+  .cards { display: flex; gap: 16px; flex-wrap: wrap; }
+  .card { background: #1a1d24; border: 1px solid #2a2f3a; border-radius: 8px; padding: 16px; flex: 1; min-width: 140px; }
+  .card h3 { margin: 0 0 4px; font-size: 12px; color: #8a93a3; text-transform: uppercase; }
+  .card .v { font-size: 22px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #2a2f3a; font-size: 14px; }
+  .killbtn { background: #b3261e; color: #fff; border: 0; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 15px; }
+  .resumebtn { background: #1e7d34; color: #fff; border: 0; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 15px; }
+  .banner { background: #4a1410; border: 1px solid #b3261e; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; }
+  h1 { font-size: 20px; }
+  .muted { color: #8a93a3; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+function money(n) { return "$" + Number(n || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+
+function App() {
+  const [status, setStatus] = useState({killed: false, kill_reason: ""});
+  const [pf, setPf] = useState({cash:0, equity:0, exposure:0, realized_pnl:0, positions:[]});
+  const [decisions, setDecisions] = useState([]);
+  const [events, setEvents] = useState([]);
+
+  const load = useCallback(async () => {
+    const j = async (u) => (await fetch(u)).json();
+    setStatus(await j("/api/status"));
+    setPf(await j("/api/portfolio"));
+    setDecisions(await j("/api/decisions"));
+    setEvents(await j("/api/events"));
+  }, []);
+
+  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
+
+  const kill = async () => { await fetch("/api/kill", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({reason:"manual from dashboard"})}); load(); };
+  const resume = async () => { await fetch("/api/resume", {method:"POST"}); load(); };
+
+  return (
+    <div className="wrap">
+      <h1>Trading Bot Dashboard</h1>
+      {status.killed && <div className="banner">KILL SWITCH ACTIVE — {status.kill_reason || "trading halted"}</div>}
+      <div style={{margin:"12px 0"}}>
+        {status.killed
+          ? <button className="resumebtn" onClick={resume}>Resume trading</button>
+          : <button className="killbtn" onClick={kill}>Kill switch — halt trading</button>}
+      </div>
+      <div className="cards">
+        <div className="card"><h3>Equity</h3><div className="v">{money(pf.equity)}</div></div>
+        <div className="card"><h3>Cash</h3><div className="v">{money(pf.cash)}</div></div>
+        <div className="card"><h3>Exposure</h3><div className="v">{(pf.exposure*100).toFixed(1)}%</div></div>
+        <div className="card"><h3>Realized P&amp;L</h3><div className="v">{money(pf.realized_pnl)}</div></div>
+      </div>
+
+      <h2>Positions</h2>
+      <table><thead><tr><th>Symbol</th><th>Qty</th><th>Avg cost</th><th>Price</th><th>Unrealized</th></tr></thead>
+      <tbody>
+        {(pf.positions||[]).map((p,i) => (
+          <tr key={i}><td>{p.symbol}</td><td>{Number(p.qty).toFixed(4)}</td><td>{money(p.avg_cost)}</td><td>{money(p.price)}</td><td>{money(p.unrealized_pnl)}</td></tr>
+        ))}
+        {(!pf.positions || pf.positions.length===0) && <tr><td colSpan="5" className="muted">No open positions</td></tr>}
+      </tbody></table>
+
+      <h2>Recent decisions</h2>
+      <table><thead><tr><th>Time</th><th>Symbol</th><th>Action</th><th>Why</th></tr></thead>
+      <tbody>
+        {decisions.map((d,i) => (<tr key={i}><td className="muted">{d.ts}</td><td>{d.symbol}</td><td>{d.action}</td><td>{d.rationale}</td></tr>))}
+        {decisions.length===0 && <tr><td colSpan="4" className="muted">No decisions yet</td></tr>}
+      </tbody></table>
+
+      <h2>Alerts &amp; events</h2>
+      <table><thead><tr><th>Time</th><th>Kind</th><th>Detail</th></tr></thead>
+      <tbody>
+        {events.map((e,i) => (<tr key={i}><td className="muted">{e.ts}</td><td>{e.kind}</td><td>{e.detail}</td></tr>))}
+        {events.length===0 && <tr><td colSpan="3" className="muted">No events</td></tr>}
+      </tbody></table>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

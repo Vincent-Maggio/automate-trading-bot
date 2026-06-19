@@ -13,7 +13,7 @@ _TABLES = {
 
 class AuditLog:
     def __init__(self, db_path: str):
-        self.conn = sqlite3.connect(db_path)
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
         for name, cols in _TABLES.items():
             self.conn.execute(f"CREATE TABLE IF NOT EXISTS {name} ({cols})")
         self.conn.commit()

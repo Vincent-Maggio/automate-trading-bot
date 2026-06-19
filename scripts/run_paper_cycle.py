@@ -10,6 +10,7 @@ from trading_bot.strategies.momentum import MomentumBreakout
 from trading_bot.portfolio.portfolio import Portfolio
 from trading_bot.risk.risk_manager import RiskManager
 from trading_bot.risk.safety import SafetyState
+from trading_bot.control.control_store import ControlStore, apply_controls
 from trading_bot.execution.simulated import SimulatedExecutor
 from trading_bot.execution.alpaca_exec import AlpacaPaperExecutor
 from trading_bot.audit.audit_log import AuditLog
@@ -48,6 +49,9 @@ def main() -> None:
     safety = SafetyState(risk["max_daily_loss_pct"])
     pf = Portfolio(cfg["capital"]["starting_cash"])
     safety.start_day(pf.total_equity(prices))
+
+    control_store = ControlStore(cfg.get("control", {}).get("db", "control.sqlite"))
+    apply_controls(control_store, safety)
 
     if cfg["execution"]["mode"] == "alpaca":
         executor = AlpacaPaperExecutor(secrets["ALPACA_API_KEY"],
